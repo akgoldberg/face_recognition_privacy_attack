@@ -1,5 +1,9 @@
+gdown 
+matplotlib
+notebook
 numpy
 opencv-python
+pandas
 torch
 torchvision
 facenet-pytorch
