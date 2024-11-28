@@ -1,3 +1,4 @@
 data/
+templates/
 __pycache__/
 .DS_Store

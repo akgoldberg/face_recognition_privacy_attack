@@ -8,3 +8,5 @@ torch
 torchvision
 facenet-pytorch
 scikit-learn
+insightface
+onnxruntime

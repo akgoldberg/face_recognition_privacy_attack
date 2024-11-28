@@ -52,7 +52,8 @@ def split_identity_data(identity_labels, gallery_only_size, proxy_only_size, ran
             proxy_data.extend(proxy)
 
     # add proxy/gallery split to identity_labels
-    identity_labels['split'] = 'gallery'
+    identity_labels['split'] = 'none'
+    identity_labels.loc[identity_labels['filename'].isin(gallery_data), 'split'] = 'gallery'
     identity_labels.loc[identity_labels['filename'].isin(proxy_data), 'split'] = 'proxy'
 
     print(f"Number of subjects: {identity_labels['identity'].nunique()}")
@@ -92,7 +93,7 @@ def subset_by_identity(dataset, subsample_rate, random_state):
 
 
 # Load CelebA dataset
-def load_CelebA(gallery_only_size, proxy_only_size, subsample_rate, random_state):
+def load_CelebA(gallery_only_size, proxy_only_size, subsample_rate, random_state=42, max_per_id=5):
     """
     Load the CelebA dataset and split it into gallery and proxy sets.
 
@@ -100,6 +101,7 @@ def load_CelebA(gallery_only_size, proxy_only_size, subsample_rate, random_state
         gallery_only_size (float): Proportion of identities in the dataset to use for only the gallery set.
         proxy_only_size (float): Proportion of identities in the dataset to use for only the proxy set.
         subsample_rate (float): Proportion of identities to subsample for the dataset (default 1.0).
+        max_per_id (int): Maximum number of images per identity to include in the gallery set.
         random_state (int): Seed for reproducibility of subsampling.
 
     Returns:
@@ -137,7 +139,7 @@ def load_CelebA(gallery_only_size, proxy_only_size, subsample_rate, random_state
     identity_labels = pd.DataFrame({'identity': identities, 'filename': file_names})
 
     # Split data into gallery and proxy
-    gallery_set, proxy_set = split_identity_data(identity_labels, gallery_only_size, proxy_only_size, random_state)
+    gallery_set, proxy_set = split_identity_data(identity_labels, gallery_only_size, proxy_only_size, random_state, max_per_id=max_per_id)
     
     gallery_data = gallery_set.groupby('identity')['filename'].apply(list).reset_index() # list of image paths for each identity
     proxy_data = proxy_set[['identity', 'filename']] # one image path to search per row
