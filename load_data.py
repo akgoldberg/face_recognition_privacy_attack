@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 
-def split_identity_data(identity_labels, gallery_only_size, proxy_only_size, random_state, max_per_id = 5):
+def split_identity_data(identity_labels, proxy_only_size, random_state, max_per_id = 10):
     """
     Split the identity labels into gallery and proxy sets.
 
@@ -24,18 +24,14 @@ def split_identity_data(identity_labels, gallery_only_size, proxy_only_size, ran
     proxy_data = []
     
     identities = identity_labels['identity'].unique()
-    # gallery only identites 
-    ids, gallery_only_ids = train_test_split(identities, test_size=gallery_only_size, random_state=random_state)
-    # proxy only identites        
-    ids, proxy_only_ids = train_test_split(ids, test_size=proxy_only_size, random_state=random_state)
+    
+    if proxy_only_size == 0:
+        proxy_only_ids = []
+    else:
+        # proxy only identites        
+        ids, proxy_only_ids = train_test_split(identities, test_size=proxy_only_size, random_state=random_state)
 
     np.random.seed(random_state)
-    for id in gallery_only_ids:
-        # choose max_per_id images for gallery for each identity included in both
-        gallery_images = identity_labels[identity_labels['identity'] == id]['filename'].tolist()
-        if len(gallery_images) > max_per_id:
-            gallery_images = np.random.choice(gallery_images, max_per_id, replace=False).tolist()
-        gallery_data.extend(gallery_images)
     for id in proxy_only_ids:
         proxy_data.extend(identity_labels[identity_labels['identity'] == id]['filename'].tolist())
     for id in ids:
@@ -44,8 +40,7 @@ def split_identity_data(identity_labels, gallery_only_size, proxy_only_size, ran
         if len(images) == 1:
             proxy_data.extend(images.tolist())
         else:
-            test_size = 1
-            gallery, proxy = train_test_split(images.tolist(), test_size=test_size, random_state=random_state)
+            gallery, proxy = train_test_split(images.tolist(), test_size=1, random_state=random_state)
             if len(gallery) > max_per_id:
                 gallery = np.random.choice(gallery, max_per_id, replace=False).tolist()
             gallery_data.extend(gallery)
@@ -63,7 +58,6 @@ def split_identity_data(identity_labels, gallery_only_size, proxy_only_size, ran
     # Number in proxy only 
     proxy_only = identity_labels.groupby('identity').filter(lambda x: x['split'].nunique() == 1 and x['split'].unique()[0] == 'proxy')
     print(f"# of subjects in proxy only: {proxy_only['identity'].nunique()}")
-    print("=================================")
 
     return identity_labels[identity_labels['split'] == 'gallery'], identity_labels[identity_labels['split'] == 'proxy']
 
@@ -93,12 +87,11 @@ def subset_by_identity(dataset, subsample_rate, random_state):
 
 
 # Load CelebA dataset
-def load_CelebA(gallery_only_size, proxy_only_size, subsample_rate, random_state=42, max_per_id=5):
+def load_CelebA(proxy_only_size, subsample_rate, holdout_rate, random_state=42, max_per_id=10):
     """
     Load the CelebA dataset and split it into gallery and proxy sets.
 
     Args:
-        gallery_only_size (float): Proportion of identities in the dataset to use for only the gallery set.
         proxy_only_size (float): Proportion of identities in the dataset to use for only the proxy set.
         subsample_rate (float): Proportion of identities to subsample for the dataset (default 1.0).
         max_per_id (int): Maximum number of images per identity to include in the gallery set.
@@ -132,14 +125,13 @@ def load_CelebA(gallery_only_size, proxy_only_size, subsample_rate, random_state
         identities = dataset.identity.squeeze()
         file_names = dataset.filename
 
-
     print("=========CelebA dataset=========")
 
     # Load identity labels
     identity_labels = pd.DataFrame({'identity': identities, 'filename': file_names})
 
     # Split data into gallery and proxy
-    gallery_set, proxy_set = split_identity_data(identity_labels, gallery_only_size, proxy_only_size, random_state, max_per_id=max_per_id)
+    gallery_set, proxy_set = split_identity_data(identity_labels, proxy_only_size, random_state, max_per_id=max_per_id)
     
     gallery_data = gallery_set.groupby('identity')['filename'].apply(list).reset_index() # list of image paths for each identity
     proxy_data = proxy_set[['identity', 'filename']] # one image path to search per row
@@ -149,4 +141,18 @@ def load_CelebA(gallery_only_size, proxy_only_size, subsample_rate, random_state
     gallery_data.loc[:, 'filename'] = gallery_data['filename'].apply(lambda x: [f"{DATA_PATH}/{i}" for i in x])
     proxy_data.loc[:, 'filename'] = proxy_data['filename'].apply(lambda x: f"{DATA_PATH}/{x}")
 
-    return gallery_data, proxy_data
+    # Split gallery set into gallery and non-member sets
+    gallery_data, gallery_nonmember_data = train_test_split(gallery_data, test_size=holdout_rate, random_state=random_state)
+
+    # Split gallery data into max_per_id / 2 images per subject and other images use for membership inference attack 
+    gallery_otherimages_data = gallery_data.copy()
+    m = max(1, max_per_id // 2)
+    gallery_data['filename'] = gallery_data['filename'].apply(lambda x: x[:m])
+    gallery_otherimages_data['filename'] = gallery_otherimages_data['filename'].apply(lambda x: x[m:] if len(x) > m else [])
+    gallery_otherimages_data = gallery_otherimages_data[gallery_otherimages_data['filename'].apply(lambda x: len(x) > 0)].reset_index()
+
+    print("Non-member set # subjects: ", len(gallery_nonmember_data))
+    print("Member set # subjects: ", len(gallery_otherimages_data))
+    print("================================")
+
+    return gallery_data, proxy_data, gallery_nonmember_data, gallery_otherimages_data
