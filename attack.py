@@ -44,10 +44,10 @@ def run_attack(benchmark, model, attack_templates, attack_templates_nonmember,
         res1.append(fnr1)
     
 
-    res0 = np.array(res0) >= T_accuracy
-    res1 = np.array(res1) >= T_accuracy
+    out0 = np.array(res0) >= T_accuracy
+    out1 = np.array(res1) >= T_accuracy
 
-    fpr = res0.mean()
-    tpr = res1.mean()
+    fpr = out0.mean()
+    tpr = out1.mean()
 
-    return fpr, tpr
+    return fpr, tpr, res0, res1
