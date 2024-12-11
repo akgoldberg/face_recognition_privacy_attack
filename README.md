@@ -31,6 +31,6 @@ This directory contains a simulated implementation of a privacy attack on a benc
 
 
 2. Run attack either with python script: 
-> python run.py
+    > python run.py
 
-or using Jupyter notebook run_attack.ipynb.
+    or using Jupyter notebook run_attack.ipynb.
