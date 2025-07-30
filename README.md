@@ -1,6 +1,8 @@
 # Introduction
 
-This directory contains a simulated implementation of a privacy attack on a benchmark for facial recognition algorithms. 
+This directory contains a simulated implementation of a privacy attack on a benchmark for facial recognition algorithms described in our KDD 2025 paper [Benchmarking Fraud Detectors on Private Graph Data](https://dl.acm.org/doi/10.1145/3690624.3709170), by Alexander Goldberg, Giulia Fanti, Nihar Shah, and Zhiwei Steven Wu. 
+
+For a technical summary of the simulated attack on the NIST benchmark and our results, see [attack_writeup.pdf](https://github.com/akgoldberg/face_recognition_privacy_attack/blob/master/attack_writeup.pdf).
 
 # Main Files
 
@@ -11,6 +13,8 @@ This directory contains a simulated implementation of a privacy attack on a benc
 - `load_data.py`: Code to load CelebA dataset.
 
 # Directory Setup 
+
+We use [docker](https://www.docker.com/) to install all necessary requirements.
 
 1. Setup docker container:
 
